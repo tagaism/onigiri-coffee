@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+:root {
+  --cream: #f4eadc;
+  --paper: #fffaf3;
+  --ink: #2b1b12;
+  --muted: #6d5242;
+  --line: #e4d4c3;
+  --terracotta: #c45c26;
+  --terracotta-dark: #a4481b;
+  --moss: #3f6b4b;
+}
+
+@theme inline {
+  --color-cream: var(--cream);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --font-sans: var(--font-figtree);
+  --font-display: var(--font-fraunces);
+}
+
+html,
+body {
+  background: var(--cream);
+  color: var(--ink);
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-figtree), system-ui, sans-serif;
+  background-image:
+    radial-gradient(circle at top left, rgba(196, 92, 38, 0.08), transparent 32rem),
+    linear-gradient(180deg, #f8f0e4 0%, var(--cream) 40%);
+}
+
+.font-display {
+  font-family: var(--font-fraunces), Georgia, serif;
+}
+
+.field {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--paper);
+  padding: 0.65rem 0.8rem;
+  color: var(--ink);
+  outline: none;
+}
+
+.field:focus {
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(196, 92, 38, 0.15);
+}
+
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  box-shadow: 0 8px 24px rgba(43, 27, 18, 0.04);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: var(--terracotta);
+  color: white;
+  font-weight: 600;
+  padding: 0.7rem 1.2rem;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--terracotta-dark);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+}
