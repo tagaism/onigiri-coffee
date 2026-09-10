@@ -1,8 +1,8 @@
 # Onigiri
 
-Personal spending tracker. Android app + Python API + Postgres.
+Personal spending tracker. Next.js web app + Android app + Python API + Postgres.
 
-MVP is **manual entry only**: you type the merchant, date, tax, and each line item. No OCR yet.
+MVP is **manual entry only**: you type the merchant, date, tax, and each line item. No OCR yet. Use the **web app** as the main client.
 
 ## Run the API
 
@@ -12,6 +12,14 @@ docker compose up --build
 
 API: [http://localhost:8000](http://localhost:8000)  
 Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+If port 8000 is already in use on your machine:
+
+```bash
+API_PORT=8001 docker compose up --build
+```
+
+Then point the web app at `http://localhost:8001` (Settings, or `web/.env.local`).
 
 Copy `.env.example` to `.env` if you want to override `JWT_SECRET`.
 
@@ -46,6 +54,21 @@ curl -s "http://localhost:8000/stats/summary?from=2026-09-01&to=2026-09-30" \
 
 Money fields are JSON **strings** (for example `"500.00"`) so amounts stay exact.
 
+## Web app
+
+With the API running:
+
+```bash
+cd web
+cp .env.example .env.local   # optional; default is http://localhost:8000
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). Create an account, add a receipt, and type each item.
+
+Change the API URL under **Settings** if the backend is not on localhost:8000.
+
 ## Android
 
 Open `android/` in Android Studio and run the `app` configuration.
@@ -78,6 +101,7 @@ python3.13 -m venv .venv
 ## Layout
 
 ```
+web/          Next.js app (primary client)
 backend/     FastAPI, Alembic, tests
 android/      Kotlin + Jetpack Compose
 docker-compose.yml

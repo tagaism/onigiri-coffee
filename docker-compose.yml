@@ -19,7 +19,7 @@ services:
   api:
     build: ./backend
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://onigiri:onigiri@db:5432/onigiri
       JWT_SECRET: ${JWT_SECRET:-dev-only-change-me}

@@ -30,5 +30,10 @@ captures/
 *.keystore
 *.jks
 
+# Web
+web/node_modules/
+web/.next/
+web/out/
+
 # Editors
 *.swp
