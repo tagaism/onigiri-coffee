@@ -1,11 +1,11 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { formatMoney, lineAmount, parseMoney, todayIso } from "@/lib/money";
+import { formatMoney, labelCategory, lineAmount, parseMoney, todayIso } from "@/lib/money";
 import { getCurrency } from "@/lib/session";
-import type { Receipt } from "@/lib/types";
+import type { Category, Receipt } from "@/lib/types";
 
 type ItemDraft = {
   key: string;
@@ -46,7 +46,15 @@ export function ReceiptForm({ receipt }: { receipt?: Receipt }) {
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryId, setCategoryId] = useState(receipt?.category?.id ?? "");
+  const [newCategory, setNewCategory] = useState("");
+  const [addingCategory, setAddingCategory] = useState(false);
   const currency = receipt?.currency ?? getCurrency();
+
+  useEffect(() => {
+    api.listCategories().then(setCategories).catch(() => setCategories([]));
+  }, []);
 
   const total = useMemo(() => {
     const itemsTotal = items.reduce(
@@ -87,6 +95,7 @@ export function ReceiptForm({ receipt }: { receipt?: Receipt }) {
         currency,
         tax: String(parseMoney(tax) ?? 0),
         notes: notes.trim() || null,
+        category_id: categoryId || null,
         items: payloadItems,
       };
       const saved = receipt
@@ -130,6 +139,50 @@ export function ReceiptForm({ receipt }: { receipt?: Receipt }) {
             inputMode="decimal"
           />
         </label>
+      </div>
+      <label className="block">
+        <span className="mb-1 block text-sm text-[var(--muted)]">Category</span>
+        <select
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
+          className="field"
+        >
+          <option value="">Uncategorized</option>
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {labelCategory(category.name)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="flex gap-2">
+        <input
+          value={newCategory}
+          onChange={(e) => setNewCategory(e.target.value)}
+          className="field"
+          placeholder="New custom category"
+        />
+        <button
+          type="button"
+          className="shrink-0 rounded-full border border-[var(--line)] px-4 py-2 text-sm"
+          disabled={addingCategory || !newCategory.trim()}
+          onClick={async () => {
+            setAddingCategory(true);
+            setError(null);
+            try {
+              const created = await api.createCategory(newCategory.trim());
+              setCategories((current) => [...current, created]);
+              setCategoryId(created.id);
+              setNewCategory("");
+            } catch (err) {
+              setError(err instanceof Error ? err.message : "Could not add category.");
+            } finally {
+              setAddingCategory(false);
+            }
+          }}
+        >
+          {addingCategory ? "Adding…" : "Add"}
+        </button>
       </div>
       <label className="block">
         <span className="mb-1 block text-sm text-[var(--muted)]">Notes</span>

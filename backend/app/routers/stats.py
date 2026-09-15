@@ -8,9 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_db
 from app.deps import get_current_user
-from app.models import Receipt, User
+from app.models import Category, Receipt, User
 from app.money import money
-from app.schemas import DayTotalOut, SummaryOut
+from app.schemas import CategoryTotalOut, DayTotalOut, SummaryOut
 
 router = APIRouter(prefix="/stats", tags=["stats"])
 
@@ -73,10 +73,36 @@ async def summary(
         for day, count, day_total in day_rows
     ]
 
+    category_rows = (
+        await db.execute(
+            select(
+                Category.id,
+                Category.name,
+                func.count(Receipt.id),
+                func.coalesce(func.sum(Receipt.total), 0),
+            )
+            .select_from(Receipt)
+            .outerjoin(Category, Category.id == Receipt.category_id)
+            .where(*filters)
+            .group_by(Category.id, Category.name)
+            .order_by(func.coalesce(func.sum(Receipt.total), 0).desc())
+        )
+    ).all()
+    by_category = [
+        CategoryTotalOut(
+            category_id=category_id,
+            name=name or "uncategorized",
+            count=int(count),
+            total=money(Decimal(str(cat_total))),
+        )
+        for category_id, name, count, cat_total in category_rows
+    ]
+
     return SummaryOut(
         from_date=from_date,
         to_date=to_date,
         receipt_count=receipt_count,
         total=total,
         by_day=by_day,
+        by_category=by_category,
     )

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { formatMoney } from "@/lib/money";
+import { formatMoney, labelCategory } from "@/lib/money";
 import type { Receipt } from "@/lib/types";
 
 export default function ReceiptDetailPage() {
@@ -38,7 +38,10 @@ export default function ReceiptDetailPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl">{receipt.merchant_name}</h1>
-          <p className="text-[var(--muted)]">{receipt.purchased_at}</p>
+          <p className="text-[var(--muted)]">
+            {receipt.purchased_at}
+            {receipt.category ? ` · ${labelCategory(receipt.category.name)}` : ""}
+          </p>
         </div>
         <div className="flex gap-2">
           <Link href={`/receipts/${receipt.id}/edit`} className="btn-primary">

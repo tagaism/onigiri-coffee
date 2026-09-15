@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import { formatMoney, monthRange } from "@/lib/money";
+import { formatMoney, labelCategory, monthRange } from "@/lib/money";
 import { getCurrency } from "@/lib/session";
 import type { ReceiptListItem, Summary } from "@/lib/types";
 
@@ -60,6 +60,16 @@ export default function HomePage() {
         <p className="mt-1 text-sm text-[var(--muted)]">
           {summary?.receipt_count ?? 0} receipts this month
         </p>
+        {summary?.by_category && summary.by_category.length > 0 ? (
+          <ul className="mt-4 space-y-1 text-sm text-[var(--muted)]">
+            {summary.by_category.map((row) => (
+              <li key={row.category_id ?? "none"} className="flex justify-between">
+                <span>{labelCategory(row.name)}</span>
+                <span>{formatMoney(row.total, currency)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </section>
 
       {receipts.length === 0 ? (
@@ -84,6 +94,7 @@ export default function HomePage() {
                   <p className="font-medium">{receipt.merchant_name}</p>
                   <p className="text-sm text-[var(--muted)]">
                     {receipt.purchased_at} · {receipt.item_count} items
+                    {receipt.category ? ` · ${labelCategory(receipt.category.name)}` : ""}
                   </p>
                 </div>
                 <p className="font-display text-lg">
