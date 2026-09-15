@@ -4,24 +4,48 @@ Personal spending tracker. Next.js web app + Android app + Python API + Postgres
 
 MVP is **manual entry only**: you type the merchant, date, tax, and each line item. No OCR yet. Use the **web app** as the main client.
 
-## Run the API
+## Database (Postgres.app)
+
+Local development uses **[Postgres.app](https://postgresapp.com/)** as the database, not Docker Postgres. Open Postgres.app and wait until it is running (menu-bar elephant).
+
+Create the app databases once (this is already done on this machine):
 
 ```bash
-docker compose up --build
+psql -d postgres -f backend/scripts/setup_postgres_app.sql
+```
+
+That creates user `onigiri` / password `onigiri` and databases `onigiri` and `onigiri_test`.
+
+Copy `.env.example` to `.env`. The default URL talks to Postgres.app on localhost:
+
+```env
+DATABASE_URL=postgresql+asyncpg://onigiri:onigiri@localhost:5432/onigiri
+```
+
+Do **not** run Docker’s Postgres at the same time — both use port `5432`.
+
+```bash
+docker compose stop db
+```
+
+## Run the API
+
+Run the API **on your Mac** so it can reach Postgres.app on `localhost`:
+
+```bash
+cd backend
+../.venv/bin/alembic upgrade head
+../.venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 API: [http://localhost:8000](http://localhost:8000)  
 Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-If port 8000 is already in use on your machine:
-
-```bash
-API_PORT=8001 docker compose up --build
-```
-
-Then point the web app at `http://localhost:8001` (Settings, or `web/.env.local`).
+If port 8000 is already in use, use `--port 8001` and point the web app at `http://localhost:8001` (Settings, or `web/.env.local`).
 
 Copy `.env.example` to `.env` if you want to override `JWT_SECRET`.
+
+A Dockerized API cannot see Postgres.app (it only listens on your Mac’s localhost). Keep Docker Postgres optional with `docker compose --profile docker-db up` — do not use it while Postgres.app is running.
 
 ### Example
 
@@ -84,7 +108,7 @@ HTTP cleartext is allowed in this MVP so the emulator can talk to Docker on your
 
 ## Tests
 
-Postgres must be running (`docker compose up -d db`).
+Postgres.app must be running, with databases `onigiri` and `onigiri_test`.
 
 ```bash
 cd backend

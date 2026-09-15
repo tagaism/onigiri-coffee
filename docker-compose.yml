@@ -1,5 +1,6 @@
 services:
   db:
+    profiles: ["docker-db"]
     image: postgres:16
     environment:
       POSTGRES_USER: onigiri
@@ -21,14 +22,11 @@ services:
     ports:
       - "${API_PORT:-8000}:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://onigiri:onigiri@db:5432/onigiri
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://onigiri:onigiri@host.docker.internal:5432/onigiri}
       JWT_SECRET: ${JWT_SECRET:-dev-only-change-me}
       JWT_EXPIRE_MINUTES: "10080"
       DEFAULT_CURRENCY: JPY
       CORS_ORIGINS: "*"
-    depends_on:
-      db:
-        condition: service_healthy
 
 volumes:
   pgdata:
