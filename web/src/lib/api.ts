@@ -1,5 +1,13 @@
 import { getApiUrl, getToken } from "./session";
-import type { Receipt, ReceiptIn, ReceiptListItem, Summary, TokenResponse, User } from "./types";
+import type {
+  Category,
+  Receipt,
+  ReceiptIn,
+  ReceiptListItem,
+  Summary,
+  TokenResponse,
+  User,
+} from "./types";
 
 type Detail = { detail?: string | { msg?: string }[] };
 
@@ -59,4 +67,8 @@ export const api = {
     request<void>(`/receipts/${id}`, { method: "DELETE" }),
   summary: (from: string, to: string) =>
     request<Summary>(`/stats/summary?from=${from}&to=${to}`),
+  listCategories: () => request<Category[]>("/categories"),
+  createCategory: (name: string) =>
+    request<Category>("/categories", { method: "POST", body: JSON.stringify({ name }) }),
+  deleteCategory: (id: string) => request<void>(`/categories/${id}`, { method: "DELETE" }),
 };

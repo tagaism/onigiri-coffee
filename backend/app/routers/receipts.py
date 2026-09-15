@@ -5,11 +5,13 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from app.db import get_db
 from app.deps import get_current_user
+from app.categories import require_owned_category
 from app.models import LineItem, Receipt, User
 from app.receipts import apply_patch, create_receipt, get_owned_receipt, to_receipt_out
-from app.schemas import ReceiptIn, ReceiptListOut, ReceiptOut, ReceiptPatchIn
+from app.schemas import CategoryOut, ReceiptIn, ReceiptListOut, ReceiptOut, ReceiptPatchIn
 
 router = APIRouter(prefix="/receipts", tags=["receipts"])
 
@@ -20,7 +22,10 @@ async def create(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ReceiptOut:
-    receipt = create_receipt(user, body)
+    category = None
+    if body.category_id is not None:
+        category = await require_owned_category(db, user.id, body.category_id)
+    receipt = create_receipt(user, body, category=category)
     db.add(receipt)
     await db.commit()
     created = await get_owned_receipt(db, user.id, receipt.id)
@@ -43,7 +48,11 @@ async def list_receipts(
         .correlate(Receipt)
         .scalar_subquery()
     )
-    stmt = select(Receipt, item_count).where(Receipt.user_id == user.id)
+    stmt = (
+        select(Receipt, item_count)
+        .where(Receipt.user_id == user.id)
+        .options(selectinload(Receipt.category))
+    )
     if from_date is not None:
         stmt = stmt.where(Receipt.purchased_at >= from_date)
     if to_date is not None:
@@ -60,6 +69,7 @@ async def list_receipts(
             tax=receipt.tax,
             total=receipt.total,
             item_count=count or 0,
+            category=CategoryOut.model_validate(receipt.category) if receipt.category else None,
             created_at=receipt.created_at,
         )
         for receipt, count in rows
@@ -88,6 +98,8 @@ async def patch_receipt(
     receipt = await get_owned_receipt(db, user.id, receipt_id)
     if receipt is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Receipt not found")
+    if body.category_id is not None:
+        await require_owned_category(db, user.id, body.category_id)
     await apply_patch(db, receipt, body)
     await db.commit()
     updated = await get_owned_receipt(db, user.id, receipt_id)

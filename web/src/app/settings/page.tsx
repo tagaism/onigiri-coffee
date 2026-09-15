@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { labelCategory } from "@/lib/money";
 import {
   DEFAULT_API_URL,
   clearSession,
@@ -11,6 +13,7 @@ import {
   setApiUrl,
   setCurrency,
 } from "@/lib/session";
+import type { Category } from "@/lib/types";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -18,11 +21,18 @@ export default function SettingsPage() {
   const [apiUrl, setApiUrlField] = useState(DEFAULT_API_URL);
   const [currency, setCurrencyField] = useState("JPY");
   const [saved, setSaved] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [newCategory, setNewCategory] = useState("");
+  const [categoryError, setCategoryError] = useState<string | null>(null);
 
   useEffect(() => {
-    setLoggedIn(Boolean(getToken()));
+    const token = Boolean(getToken());
+    setLoggedIn(token);
     setApiUrlField(getApiUrl());
     setCurrencyField(getCurrency());
+    if (token) {
+      api.listCategories().then(setCategories).catch(() => setCategories([]));
+    }
   }, []);
 
   function onSave(event: FormEvent) {
@@ -66,6 +76,66 @@ export default function SettingsPage() {
           {saved ? "Saved" : "Save"}
         </button>
       </form>
+      {loggedIn ? (
+        <section className="card space-y-3 p-6">
+          <h2 className="font-display text-xl">Categories</h2>
+          <ul className="space-y-2">
+            {categories.map((category) => (
+              <li key={category.id} className="flex items-center justify-between gap-3 text-sm">
+                <span>
+                  {labelCategory(category.name)}
+                  {category.is_default ? (
+                    <span className="ml-2 text-xs text-[var(--muted)]">default</span>
+                  ) : null}
+                </span>
+                {category.is_default ? null : (
+                  <button
+                    type="button"
+                    className="text-[var(--muted)] hover:text-[var(--ink)]"
+                    onClick={async () => {
+                      setCategoryError(null);
+                      try {
+                        await api.deleteCategory(category.id);
+                        setCategories((current) => current.filter((row) => row.id !== category.id));
+                      } catch (err) {
+                        setCategoryError(err instanceof Error ? err.message : "Could not delete.");
+                      }
+                    }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          <div className="flex gap-2">
+            <input
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              className="field"
+              placeholder="Custom category"
+            />
+            <button
+              type="button"
+              className="btn-primary shrink-0"
+              disabled={!newCategory.trim()}
+              onClick={async () => {
+                setCategoryError(null);
+                try {
+                  const created = await api.createCategory(newCategory.trim());
+                  setCategories((current) => [...current, created]);
+                  setNewCategory("");
+                } catch (err) {
+                  setCategoryError(err instanceof Error ? err.message : "Could not add.");
+                }
+              }}
+            >
+              Add
+            </button>
+          </div>
+          {categoryError ? <p className="text-sm text-red-700">{categoryError}</p> : null}
+        </section>
+      ) : null}
       {loggedIn ? (
         <button
           type="button"

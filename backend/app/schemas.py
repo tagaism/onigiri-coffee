@@ -56,6 +56,19 @@ class TokenOut(BaseModel):
     user: UserOut
 
 
+class CategoryOut(BaseModel):
+    id: UUID
+    name: str
+    is_default: bool
+    sort_order: int
+
+    model_config = {"from_attributes": True}
+
+
+class CategoryIn(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+
+
 class LineItemIn(BaseModel):
     name: str = Field(min_length=1, max_length=500)
     quantity: Quantity = Decimal("1")
@@ -97,6 +110,7 @@ class ReceiptIn(BaseModel):
     tax: Money = Decimal("0")
     total: Money | None = None
     notes: str | None = None
+    category_id: UUID | None = None
     items: list[LineItemIn] = Field(min_length=1)
 
     @field_validator("currency")
@@ -124,6 +138,7 @@ class ReceiptPatchIn(BaseModel):
     tax: Money | None = None
     total: Money | None = None
     notes: str | None = None
+    category_id: UUID | None = None
     items: list[LineItemIn] | None = Field(default=None, min_length=1)
 
     @field_validator("currency")
@@ -147,6 +162,7 @@ class ReceiptOut(BaseModel):
     computed_total: Money
     total_mismatch: bool
     notes: str | None
+    category: CategoryOut | None
     items: list[LineItemOut]
     created_at: datetime
     updated_at: datetime
@@ -162,6 +178,7 @@ class ReceiptListOut(BaseModel):
     tax: Money
     total: Money
     item_count: int
+    category: CategoryOut | None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -173,11 +190,19 @@ class DayTotalOut(BaseModel):
     total: Money
 
 
+class CategoryTotalOut(BaseModel):
+    category_id: UUID | None
+    name: str
+    count: int
+    total: Money
+
+
 class SummaryOut(BaseModel):
     from_date: date = Field(serialization_alias="from")
     to_date: date = Field(serialization_alias="to")
     receipt_count: int
     total: Money
     by_day: list[DayTotalOut]
+    by_category: list[CategoryTotalOut]
 
     model_config = {"populate_by_name": True}
