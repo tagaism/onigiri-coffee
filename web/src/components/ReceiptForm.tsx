@@ -3,7 +3,15 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { formatMoney, labelCategory, lineAmount, parseMoney, todayIso } from "@/lib/money";
+import {
+  computedLineAmount,
+  formatAmountInput,
+  formatMoney,
+  labelCategory,
+  lineAmount,
+  parseMoney,
+  todayIso,
+} from "@/lib/money";
 import { getCurrency } from "@/lib/session";
 import type { Category, Receipt } from "@/lib/types";
 
@@ -13,6 +21,7 @@ type ItemDraft = {
   quantity: string;
   unitPrice: string;
   amount: string;
+  amountManual: boolean;
 };
 
 function blankItem(): ItemDraft {
@@ -22,17 +31,23 @@ function blankItem(): ItemDraft {
     quantity: "1",
     unitPrice: "",
     amount: "",
+    amountManual: false,
   };
 }
 
 function fromReceipt(receipt: Receipt): ItemDraft[] {
-  return receipt.items.map((item) => ({
-    key: item.id,
-    name: item.name,
-    quantity: item.quantity,
-    unitPrice: item.unit_price ?? "",
-    amount: item.amount,
-  }));
+  return receipt.items.map((item) => {
+    const computed = computedLineAmount(item.quantity, item.unit_price ?? "");
+    const amountValue = parseMoney(item.amount);
+    return {
+      key: item.id,
+      name: item.name,
+      quantity: item.quantity,
+      unitPrice: item.unit_price ?? "",
+      amount: item.amount,
+      amountManual: computed === null || amountValue !== computed,
+    };
+  });
 }
 
 export function ReceiptForm({ receipt }: { receipt?: Receipt }) {
@@ -65,7 +80,24 @@ export function ReceiptForm({ receipt }: { receipt?: Receipt }) {
   }, [items, tax]);
 
   function updateItem(key: string, patch: Partial<ItemDraft>) {
-    setItems((current) => current.map((item) => (item.key === key ? { ...item, ...patch } : item)));
+    setItems((current) =>
+      current.map((item) => {
+        if (item.key !== key) return item;
+        const next = { ...item, ...patch };
+        if ("quantity" in patch || "unitPrice" in patch) {
+          if (!next.amountManual) {
+            const computed = computedLineAmount(next.quantity, next.unitPrice);
+            if (computed !== null) next.amount = formatAmountInput(computed);
+          }
+        }
+        if ("amount" in patch) {
+          const computed = computedLineAmount(next.quantity, next.unitPrice);
+          next.amountManual =
+            computed === null || parseMoney(next.amount) !== computed;
+        }
+        return next;
+      }),
+    );
   }
 
   async function onSubmit(event: FormEvent) {
@@ -233,7 +265,6 @@ export function ReceiptForm({ receipt }: { receipt?: Receipt }) {
                 onChange={(e) => updateItem(item.key, { amount: e.target.value })}
                 className="field"
                 inputMode="decimal"
-                placeholder={String(lineAmount(item.quantity, item.unitPrice, item.amount) || "")}
               />
             </label>
             <button

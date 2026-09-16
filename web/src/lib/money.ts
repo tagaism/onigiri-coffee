@@ -20,12 +20,21 @@ export function formatMoney(amount: string | number, currency: string): string {
   }
 }
 
+export function computedLineAmount(quantity: string, unitPrice: string): number | null {
+  const qty = parseMoney(quantity);
+  const price = parseMoney(unitPrice);
+  if (qty === null || price === null) return null;
+  return Math.round(qty * price * 100) / 100;
+}
+
+export function formatAmountInput(value: number): string {
+  return String(Math.round(value * 100) / 100);
+}
+
 export function lineAmount(quantity: string, unitPrice: string, amount: string): number {
   const explicit = parseMoney(amount);
   if (explicit !== null) return Math.round(explicit * 100) / 100;
-  const qty = parseMoney(quantity) ?? 1;
-  const price = parseMoney(unitPrice) ?? 0;
-  return Math.round(qty * price * 100) / 100;
+  return computedLineAmount(quantity, unitPrice) ?? 0;
 }
 
 export function monthRange(date = new Date()): { from: string; to: string; label: string } {
