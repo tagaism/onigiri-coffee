@@ -49,6 +49,7 @@ class Receipt(Base):
     purchased_at: Mapped[date] = mapped_column(Date)
     currency: Mapped[str] = mapped_column(CHAR(3))
     tax: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0"))
+    tax_rate: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     category_id: Mapped[uuid.UUID | None] = mapped_column(

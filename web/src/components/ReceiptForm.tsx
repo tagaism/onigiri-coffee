@@ -4,13 +4,17 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import {
+  TAX_RATES,
   computedLineAmount,
   formatAmountInput,
   formatMoney,
+  inferTaxRate,
   labelCategory,
   lineAmount,
   parseMoney,
+  taxFromRate,
   todayIso,
+  type TaxRate,
 } from "@/lib/money";
 import { getCurrency } from "@/lib/session";
 import type { Category, Receipt } from "@/lib/types";
@@ -54,7 +58,6 @@ export function ReceiptForm({ receipt }: { receipt?: Receipt }) {
   const router = useRouter();
   const [merchant, setMerchant] = useState(receipt?.merchant_name ?? "");
   const [purchasedAt, setPurchasedAt] = useState(receipt?.purchased_at ?? todayIso());
-  const [tax, setTax] = useState(receipt?.tax ?? "0");
   const [notes, setNotes] = useState(receipt?.notes ?? "");
   const [items, setItems] = useState<ItemDraft[]>(
     receipt ? fromReceipt(receipt) : [blankItem()],
@@ -66,18 +69,31 @@ export function ReceiptForm({ receipt }: { receipt?: Receipt }) {
   const [newCategory, setNewCategory] = useState("");
   const [addingCategory, setAddingCategory] = useState(false);
   const currency = receipt?.currency ?? getCurrency();
+  const initialSubtotal = receipt
+    ? receipt.items.reduce((sum, item) => sum + (parseMoney(item.amount) ?? 0), 0)
+    : 0;
+  const [taxRate, setTaxRate] = useState<TaxRate>(
+    receipt?.tax_rate === 8 || receipt?.tax_rate === 10
+      ? receipt.tax_rate
+      : receipt
+        ? inferTaxRate(receipt.tax, initialSubtotal)
+        : 10,
+  );
 
   useEffect(() => {
     api.listCategories().then(setCategories).catch(() => setCategories([]));
   }, []);
 
-  const total = useMemo(() => {
-    const itemsTotal = items.reduce(
-      (sum, item) => sum + lineAmount(item.quantity, item.unitPrice, item.amount),
-      0,
-    );
-    return itemsTotal + (parseMoney(tax) ?? 0);
-  }, [items, tax]);
+  const itemsTotal = useMemo(
+    () =>
+      items.reduce(
+        (sum, item) => sum + lineAmount(item.quantity, item.unitPrice, item.amount),
+        0,
+      ),
+    [items],
+  );
+  const taxAmount = taxFromRate(itemsTotal, taxRate);
+  const total = itemsTotal + taxAmount;
 
   function updateItem(key: string, patch: Partial<ItemDraft>) {
     setItems((current) =>
@@ -125,7 +141,7 @@ export function ReceiptForm({ receipt }: { receipt?: Receipt }) {
         merchant_name: merchant.trim(),
         purchased_at: purchasedAt,
         currency,
-        tax: String(parseMoney(tax) ?? 0),
+        tax_rate: taxRate,
         notes: notes.trim() || null,
         category_id: categoryId || null,
         items: payloadItems,
@@ -164,12 +180,20 @@ export function ReceiptForm({ receipt }: { receipt?: Receipt }) {
         </label>
         <label className="block">
           <span className="mb-1 block text-sm text-[var(--muted)]">Tax</span>
-          <input
-            value={tax}
-            onChange={(e) => setTax(e.target.value)}
+          <select
+            value={taxRate}
+            onChange={(e) => setTaxRate(Number(e.target.value) as TaxRate)}
             className="field"
-            inputMode="decimal"
-          />
+          >
+            {TAX_RATES.map((rate) => (
+              <option key={rate} value={rate}>
+                {rate}%
+              </option>
+            ))}
+          </select>
+          <span className="mt-1 block text-xs text-[var(--muted)]">
+            {formatMoney(taxAmount, currency)}
+          </span>
         </label>
       </div>
       <label className="block">

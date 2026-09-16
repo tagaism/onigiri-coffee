@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import Category, LineItem, Receipt, User
-from app.money import money, qty
+from app.money import money, qty, tax_from_rate
 from app.schemas import CategoryOut, LineItemIn, ReceiptIn, ReceiptOut, ReceiptPatchIn
 
 
@@ -28,6 +28,7 @@ def to_receipt_out(receipt: Receipt) -> ReceiptOut:
         purchased_at=receipt.purchased_at,
         currency=receipt.currency,
         tax=money(receipt.tax),
+        tax_rate=receipt.tax_rate,
         total=stored,
         computed_total=computed,
         total_mismatch=stored != computed,
@@ -76,7 +77,11 @@ async def get_owned_receipt(db: AsyncSession, user_id: UUID, receipt_id: UUID) -
 
 def create_receipt(user: User, body: ReceiptIn, category: Category | None = None) -> Receipt:
     items = build_line_items(body.items)
-    tax = money(body.tax)
+    tax_rate = body.tax_rate
+    if tax_rate is not None:
+        tax = tax_from_rate(items_sum(items), tax_rate)
+    else:
+        tax = money(body.tax)
     currency = (body.currency or user.default_currency).upper()
     now = datetime.now(UTC)
     return Receipt(
@@ -86,6 +91,7 @@ def create_receipt(user: User, body: ReceiptIn, category: Category | None = None
         purchased_at=body.purchased_at,
         currency=currency,
         tax=tax,
+        tax_rate=tax_rate,
         total=resolve_total(items, tax, body.total),
         notes=body.notes,
         category_id=category.id if category else None,
@@ -106,12 +112,23 @@ async def apply_patch(db: AsyncSession, receipt: Receipt, body: ReceiptPatchIn) 
         receipt.notes = body.notes
     if "category_id" in body.model_fields_set:
         receipt.category_id = body.category_id
-    if body.tax is not None:
-        receipt.tax = money(body.tax)
+    if "tax_rate" in body.model_fields_set:
+        receipt.tax_rate = body.tax_rate
     if body.items is not None:
         await db.execute(delete(LineItem).where(LineItem.receipt_id == receipt.id))
         receipt.items = build_line_items(body.items)
-    if body.total is not None or body.items is not None or body.tax is not None:
+    if receipt.tax_rate is not None and (
+        body.items is not None or "tax_rate" in body.model_fields_set
+    ):
+        receipt.tax = tax_from_rate(items_sum(list(receipt.items)), receipt.tax_rate)
+    elif body.tax is not None:
+        receipt.tax = money(body.tax)
+    if (
+        body.total is not None
+        or body.items is not None
+        or body.tax is not None
+        or "tax_rate" in body.model_fields_set
+    ):
         receipt.total = resolve_total(list(receipt.items), receipt.tax, body.total)
     receipt.updated_at = datetime.now(UTC)
     return receipt

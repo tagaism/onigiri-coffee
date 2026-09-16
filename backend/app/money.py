@@ -19,6 +19,13 @@ def money(value: Decimal) -> Decimal:
     return parse_decimal(value).quantize(TWOPLACE, rounding=ROUND_HALF_UP)
 
 
+TAX_RATES = (8, 10)
+
+
+def tax_from_rate(subtotal: Decimal, rate: int) -> Decimal:
+    return money(parse_decimal(subtotal) * Decimal(rate) / Decimal(100))
+
+
 def qty(value: Decimal) -> Decimal:
     return parse_decimal(value).quantize(THREEPLACE, rounding=ROUND_HALF_UP)
 

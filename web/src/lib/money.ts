@@ -31,6 +31,20 @@ export function formatAmountInput(value: number): string {
   return String(Math.round(value * 100) / 100);
 }
 
+export const TAX_RATES = [8, 10] as const;
+export type TaxRate = (typeof TAX_RATES)[number];
+
+export function taxFromRate(subtotal: number, rate: TaxRate): number {
+  return Math.round(((subtotal * rate) / 100) * 100) / 100;
+}
+
+export function inferTaxRate(tax: string, subtotal: number): TaxRate {
+  const taxValue = parseMoney(tax) ?? 0;
+  if (subtotal <= 0) return 10;
+  const pct = (taxValue / subtotal) * 100;
+  return Math.abs(pct - 8) <= Math.abs(pct - 10) ? 8 : 10;
+}
+
 export function lineAmount(quantity: string, unitPrice: string, amount: string): number {
   const explicit = parseMoney(amount);
   if (explicit !== null) return Math.round(explicit * 100) / 100;

@@ -112,3 +112,32 @@ async def test_delete_and_user_isolation(client):
     assert deleted.status_code == 204
     missing = await client.get(f"/receipts/{receipt_id}", headers=alice_h)
     assert missing.status_code == 404
+
+
+async def test_tax_rate_eight_percent_added_to_total(client):
+    session = await register(client)
+    headers = auth_header(session["access_token"])
+    created = await client.post(
+        "/receipts",
+        json={
+            "merchant_name": "Shop",
+            "purchased_at": "2026-09-16",
+            "tax_rate": 8,
+            "items": [{"name": "Bento", "amount": "500"}],
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert body["tax_rate"] == 8
+    assert body["tax"] == "40.00"
+    assert body["total"] == "540.00"
+
+    ten = await client.patch(
+        f"/receipts/{body['id']}",
+        json={"tax_rate": 10},
+        headers=headers,
+    )
+    assert ten.status_code == 200, ten.text
+    assert ten.json()["tax"] == "50.00"
+    assert ten.json()["total"] == "550.00"

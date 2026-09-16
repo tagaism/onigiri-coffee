@@ -72,7 +72,11 @@ export default function ReceiptDetailPage() {
           </li>
         ))}
       </ul>
-      <p className="text-sm text-[var(--muted)]">Tax {formatMoney(receipt.tax, receipt.currency)}</p>
+      <p className="text-sm text-[var(--muted)]">
+        Tax
+        {receipt.tax_rate != null ? ` ${receipt.tax_rate}% · ` : " "}
+        {formatMoney(receipt.tax, receipt.currency)}
+      </p>
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
 
       {confirm ? (
