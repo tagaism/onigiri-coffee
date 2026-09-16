@@ -194,16 +194,7 @@ export function ReceiptForm({ receipt }: { receipt?: Receipt }) {
         />
       </label>
 
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-lg">Items</h2>
-        <button
-          type="button"
-          className="text-sm font-medium text-[var(--terracotta)]"
-          onClick={() => setItems((current) => [...current, blankItem()])}
-        >
-          + Add item
-        </button>
-      </div>
+      <h2 className="font-display text-lg">Items</h2>
 
       <div className="space-y-3">
         {items.map((item) => (
@@ -260,6 +251,13 @@ export function ReceiptForm({ receipt }: { receipt?: Receipt }) {
           </div>
         ))}
       </div>
+      <button
+        type="button"
+        className="text-sm font-medium text-[var(--terracotta)]"
+        onClick={() => setItems((current) => [...current, blankItem()])}
+      >
+        + Add item
+      </button>
 
       <p className="font-display text-2xl">{formatMoney(total, currency)}</p>
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
