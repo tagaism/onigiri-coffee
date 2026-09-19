@@ -33,12 +33,19 @@ export type Category = {
   sort_order: number;
 };
 
+export type Merchant = {
+  id: string;
+  name: string;
+  last_used_at: string;
+};
+
 export type Receipt = {
   id: string;
   merchant_name: string;
   purchased_at: string;
   currency: string;
   tax: string;
+  tax_rate: number | null;
   total: string;
   computed_total: string;
   total_mismatch: boolean;
@@ -65,7 +72,8 @@ export type ReceiptIn = {
   merchant_name: string;
   purchased_at: string;
   currency?: string;
-  tax: string;
+  tax?: string;
+  tax_rate?: number | null;
   notes?: string | null;
   category_id?: string | null;
   items: LineItemIn[];
