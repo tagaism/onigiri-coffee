@@ -1,6 +1,7 @@
 import { getApiUrl, getToken } from "./session";
 import type {
   Category,
+  Merchant,
   Receipt,
   ReceiptIn,
   ReceiptListItem,
@@ -71,4 +72,5 @@ export const api = {
   createCategory: (name: string) =>
     request<Category>("/categories", { method: "POST", body: JSON.stringify({ name }) }),
   deleteCategory: (id: string) => request<void>(`/categories/${id}`, { method: "DELETE" }),
+  listMerchants: () => request<Merchant[]>("/merchants"),
 };

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Self
+from typing import Literal, Self
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
@@ -69,6 +69,14 @@ class CategoryIn(BaseModel):
     name: str = Field(min_length=1, max_length=80)
 
 
+class MerchantOut(BaseModel):
+    id: UUID
+    name: str
+    last_used_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class LineItemIn(BaseModel):
     name: str = Field(min_length=1, max_length=500)
     quantity: Quantity = Decimal("1")
@@ -108,6 +116,7 @@ class ReceiptIn(BaseModel):
     purchased_at: date
     currency: str | None = None
     tax: Money = Decimal("0")
+    tax_rate: Literal[8, 10] | None = None
     total: Money | None = None
     notes: str | None = None
     category_id: UUID | None = None
@@ -136,6 +145,7 @@ class ReceiptPatchIn(BaseModel):
     purchased_at: date | None = None
     currency: str | None = None
     tax: Money | None = None
+    tax_rate: Literal[8, 10] | None = None
     total: Money | None = None
     notes: str | None = None
     category_id: UUID | None = None
@@ -158,6 +168,7 @@ class ReceiptOut(BaseModel):
     purchased_at: date
     currency: str
     tax: Money
+    tax_rate: int | None
     total: Money
     computed_total: Money
     total_mismatch: bool

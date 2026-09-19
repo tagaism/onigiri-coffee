@@ -36,6 +36,7 @@ class User(Base):
 
     receipts: Mapped[list[Receipt]] = relationship(back_populates="user")
     categories: Mapped[list[Category]] = relationship(back_populates="user")
+    merchants: Mapped[list[Merchant]] = relationship(back_populates="user")
 
 
 class Receipt(Base):
@@ -49,6 +50,7 @@ class Receipt(Base):
     purchased_at: Mapped[date] = mapped_column(Date)
     currency: Mapped[str] = mapped_column(CHAR(3))
     tax: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0"))
+    tax_rate: Mapped[int | None] = mapped_column(Integer, nullable=True)
     total: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     category_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -87,6 +89,26 @@ class Category(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="categories")
+
+
+class Merchant(Base):
+    __tablename__ = "merchants"
+    __table_args__ = (UniqueConstraint("user_id", "name_key", name="uq_merchants_user_name"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(255))
+    name_key: Mapped[str] = mapped_column(String(255))
+    last_used_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    user: Mapped[User] = relationship(back_populates="merchants")
 
 
 class LineItem(Base):

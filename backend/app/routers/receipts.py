@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.db import get_db
 from app.deps import get_current_user
 from app.categories import require_owned_category
+from app.merchants import upsert_merchant
 from app.models import LineItem, Receipt, User
 from app.receipts import apply_patch, create_receipt, get_owned_receipt, to_receipt_out
 from app.schemas import CategoryOut, ReceiptIn, ReceiptListOut, ReceiptOut, ReceiptPatchIn
@@ -27,6 +28,7 @@ async def create(
         category = await require_owned_category(db, user.id, body.category_id)
     receipt = create_receipt(user, body, category=category)
     db.add(receipt)
+    await upsert_merchant(db, user.id, body.merchant_name)
     await db.commit()
     created = await get_owned_receipt(db, user.id, receipt.id)
     assert created is not None
@@ -101,6 +103,7 @@ async def patch_receipt(
     if body.category_id is not None:
         await require_owned_category(db, user.id, body.category_id)
     await apply_patch(db, receipt, body)
+    await upsert_merchant(db, user.id, receipt.merchant_name)
     await db.commit()
     updated = await get_owned_receipt(db, user.id, receipt_id)
     assert updated is not None
