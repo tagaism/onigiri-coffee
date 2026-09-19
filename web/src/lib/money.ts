@@ -39,6 +39,11 @@ export function monthRange(date = new Date()): { from: string; to: string; label
   return { from: iso(from), to: iso(to), label };
 }
 
+export function labelCategory(name: string): string {
+  if (!name) return name;
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
 export function todayIso(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

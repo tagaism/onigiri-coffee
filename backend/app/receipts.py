@@ -6,9 +6,9 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import LineItem, Receipt, User
+from app.models import Category, LineItem, Receipt, User
 from app.money import money, qty
-from app.schemas import LineItemIn, ReceiptIn, ReceiptOut, ReceiptPatchIn
+from app.schemas import CategoryOut, LineItemIn, ReceiptIn, ReceiptOut, ReceiptPatchIn
 
 
 def items_sum(items: list[LineItem]) -> Decimal:
@@ -32,6 +32,7 @@ def to_receipt_out(receipt: Receipt) -> ReceiptOut:
         computed_total=computed,
         total_mismatch=stored != computed,
         notes=receipt.notes,
+        category=CategoryOut.model_validate(receipt.category) if receipt.category else None,
         items=receipt.items,
         created_at=receipt.created_at,
         updated_at=receipt.updated_at,
@@ -68,12 +69,12 @@ async def get_owned_receipt(db: AsyncSession, user_id: UUID, receipt_id: UUID) -
     stmt = (
         select(Receipt)
         .where(Receipt.id == receipt_id, Receipt.user_id == user_id)
-        .options(selectinload(Receipt.items))
+        .options(selectinload(Receipt.items), selectinload(Receipt.category))
     )
     return await db.scalar(stmt)
 
 
-def create_receipt(user: User, body: ReceiptIn) -> Receipt:
+def create_receipt(user: User, body: ReceiptIn, category: Category | None = None) -> Receipt:
     items = build_line_items(body.items)
     tax = money(body.tax)
     currency = (body.currency or user.default_currency).upper()
@@ -87,6 +88,7 @@ def create_receipt(user: User, body: ReceiptIn) -> Receipt:
         tax=tax,
         total=resolve_total(items, tax, body.total),
         notes=body.notes,
+        category_id=category.id if category else None,
         items=items,
         created_at=now,
         updated_at=now,
@@ -102,6 +104,8 @@ async def apply_patch(db: AsyncSession, receipt: Receipt, body: ReceiptPatchIn) 
         receipt.currency = body.currency
     if body.notes is not None:
         receipt.notes = body.notes
+    if "category_id" in body.model_fields_set:
+        receipt.category_id = body.category_id
     if body.tax is not None:
         receipt.tax = money(body.tax)
     if body.items is not None:

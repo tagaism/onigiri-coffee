@@ -4,7 +4,20 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import CHAR, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, Uuid, func
+from sqlalchemy import (
+    Boolean,
+    CHAR,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+    Uuid,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -22,6 +35,7 @@ class User(Base):
     )
 
     receipts: Mapped[list[Receipt]] = relationship(back_populates="user")
+    categories: Mapped[list[Category]] = relationship(back_populates="user")
 
 
 class Receipt(Base):
@@ -37,6 +51,9 @@ class Receipt(Base):
     tax: Mapped[Decimal] = mapped_column(Numeric(12, 2), default=Decimal("0"))
     total: Mapped[Decimal] = mapped_column(Numeric(12, 2))
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    category_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
@@ -45,11 +62,31 @@ class Receipt(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="receipts")
+    category: Mapped[Category | None] = relationship()
     items: Mapped[list[LineItem]] = relationship(
         back_populates="receipt",
         cascade="all, delete-orphan",
         order_by="LineItem.sort_order",
     )
+
+
+class Category(Base):
+    __tablename__ = "categories"
+    __table_args__ = (UniqueConstraint("user_id", "name_key", name="uq_categories_user_name"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    name: Mapped[str] = mapped_column(String(80))
+    name_key: Mapped[str] = mapped_column(String(80))
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    user: Mapped[User] = relationship(back_populates="categories")
 
 
 class LineItem(Base):
